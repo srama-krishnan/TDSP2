@@ -69,6 +69,11 @@ def detect_and_load_csv(file_path):
         return pd.read_csv(file_path, encoding='ISO-8859-1')
 
 def analyze_and_generate_report(csv_file):
+    # Create a directory based on the CSV file name (without extension)
+    base_name = os.path.splitext(os.path.basename(csv_file))[0]
+    output_dir = base_name
+    os.makedirs(output_dir, exist_ok=True)
+
     try:
         # Load the dataset
         df = detect_and_load_csv(csv_file)
@@ -96,7 +101,7 @@ def analyze_and_generate_report(csv_file):
         plt.figure(figsize=(6, 6))
         sns.heatmap(numeric_df.corr(), annot=True, fmt=".2f", cmap="coolwarm")
         plt.title("Correlation Heatmap")
-        heatmap_path = "correlation_heatmap.png"
+        heatmap_path = os.path.join(output_dir, "correlation_heatmap.png")
         plt.savefig(heatmap_path, dpi=150)
         visualizations.append(heatmap_path)
         plt.close()
@@ -107,7 +112,7 @@ def analyze_and_generate_report(csv_file):
         plt.figure(figsize=(6, 6))
         sns.histplot(numeric_df.iloc[:, 0], kde=True, bins=20)
         plt.title(f"Distribution of {numeric_df.columns[0]}")
-        dist_path = "distribution.png"
+        dist_path = os.path.join(output_dir, "distribution.png")
         plt.savefig(dist_path, dpi=150)
         visualizations.append(dist_path)
         plt.close()
@@ -120,7 +125,7 @@ def analyze_and_generate_report(csv_file):
         plt.figure(figsize=(6, 6))
         sns.boxplot(x=first_category, y=numeric_df.columns[0], data=df)
         plt.title(f"Boxplot of {numeric_df.columns[0]} by {first_category}")
-        boxplot_path = "boxplot.png"
+        boxplot_path = os.path.join(output_dir, "boxplot.png")
         plt.savefig(boxplot_path, dpi=150)
         visualizations.append(boxplot_path)
         plt.close()
@@ -137,7 +142,7 @@ def analyze_and_generate_report(csv_file):
         narration = f"Failed to generate insights using LLM: {e}"
 
     # Write README.md
-    readme_path = "README.md"
+    readme_path = os.path.join(output_dir, "README.md")
     with open(readme_path, "w") as readme_file:
         readme_file.write("# **Analysis Report**\n\n")
         readme_file.write("## **Dataset Overview**\n")
