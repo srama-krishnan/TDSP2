@@ -15,6 +15,10 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import chardet
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 # Set the API key and endpoint
 API_KEY = os.environ.get("AIPROXY_TOKEN")
@@ -62,27 +66,24 @@ def detect_and_load_csv(file_path):
         with open(file_path, 'rb') as f:
             raw_data = f.read(10000)
         detected_encoding = chardet.detect(raw_data)['encoding']
-        print(f"Detected encoding: {detected_encoding}")
+        logging.info(f"Detected encoding: {detected_encoding}")
         return pd.read_csv(file_path, encoding=detected_encoding)
     except Exception as e:
-        print(f"Failed to load with detected encoding. Falling back to ISO-8859-1. Error: {e}")
+        logging.warning(f"Failed to load with detected encoding. Falling back to ISO-8859-1. Error: {e}")
         return pd.read_csv(file_path, encoding='ISO-8859-1')
 
 def analyze_and_generate_report(csv_file):
-    # Create a directory based on the CSV file name (without extension)
     base_name = os.path.splitext(os.path.basename(csv_file))[0]
     output_dir = base_name
     os.makedirs(output_dir, exist_ok=True)
 
     try:
-        # Load the dataset
         df = detect_and_load_csv(csv_file)
-        print(f"Dataset loaded: {len(df)} rows, {len(df.columns)} columns")
+        logging.info(f"Dataset loaded: {len(df)} rows, {len(df.columns)} columns")
     except Exception as e:
-        print(f"Error loading CSV file: {e}")
+        logging.error(f"Error loading CSV file: {e}")
         return
 
-    # Dataset summary
     summary = {
         "columns": list(df.columns),
         "data_types": df.dtypes.to_dict(),
@@ -90,13 +91,11 @@ def analyze_and_generate_report(csv_file):
         "num_missing_values": df.isnull().sum().to_dict(),
         "summary_stats": df.describe(include="all").to_dict(),
     }
-    print("Dataset summary prepared.")
+    logging.info("Dataset summary prepared.")
 
-    # Create visualizations
     visualizations = []
     numeric_df = df.select_dtypes(include=["number"])
 
-    # Visualization 1: Correlation Heatmap
     if numeric_df.shape[1] > 1:
         plt.figure(figsize=(6, 6))
         sns.heatmap(numeric_df.corr(), annot=True, fmt=".2f", cmap="coolwarm")
@@ -105,9 +104,8 @@ def analyze_and_generate_report(csv_file):
         plt.savefig(heatmap_path, dpi=150)
         visualizations.append(heatmap_path)
         plt.close()
-        print(f"Heatmap saved to: {heatmap_path}")
+        logging.info(f"Heatmap saved to: {heatmap_path}")
 
-    # Visualization 2: Distribution of First Numeric Column
     if not numeric_df.empty:
         plt.figure(figsize=(6, 6))
         sns.histplot(numeric_df.iloc[:, 0], kde=True, bins=20)
@@ -116,9 +114,8 @@ def analyze_and_generate_report(csv_file):
         plt.savefig(dist_path, dpi=150)
         visualizations.append(dist_path)
         plt.close()
-        print(f"Distribution plot saved to: {dist_path}")
+        logging.info(f"Distribution plot saved to: {dist_path}")
 
-    # Visualization 3: Boxplot
     categorical_df = df.select_dtypes(include=["object"])
     if not numeric_df.empty and not categorical_df.empty:
         first_category = categorical_df.columns[0]
@@ -129,9 +126,8 @@ def analyze_and_generate_report(csv_file):
         plt.savefig(boxplot_path, dpi=150)
         visualizations.append(boxplot_path)
         plt.close()
-        print(f"Boxplot saved to: {boxplot_path}")
+        logging.info(f"Boxplot saved to: {boxplot_path}")
 
-    # Generate insights and narration using LLM
     try:
         messages = [
             {"role": "system", "content": "You are a data analysis assistant."},
@@ -141,7 +137,6 @@ def analyze_and_generate_report(csv_file):
     except Exception as e:
         narration = f"Failed to generate insights using LLM: {e}"
 
-    # Write README.md
     readme_path = os.path.join(output_dir, "README.md")
     with open(readme_path, "w") as readme_file:
         readme_file.write("# *Analysis Report*\n\n")
@@ -151,27 +146,25 @@ def analyze_and_generate_report(csv_file):
         for col in summary['columns']:
             readme_file.write(f"- {col}\n")
         readme_file.write("\n")
-
         readme_file.write("## *Analysis Summary*\n")
         readme_file.write(narration + "\n\n")
-
         readme_file.write("## *Visualizations*\n")
         for viz in visualizations:
             readme_file.write(f"### {viz.replace('.png', '').capitalize()}:\n")
             readme_file.write(f"![{viz}]({viz})\n\n")
-    print(f"README.md written to: {readme_path}")
+    logging.info(f"README.md written to: {readme_path}")
 
 if __name__ == "__main__":
     import sys
 
     if len(sys.argv) != 2:
-        print("Usage: python autolysis.py <dataset.csv>")
+        logging.error("Usage: python autolysis.py <dataset.csv>")
         sys.exit(1)
 
     csv_filename = sys.argv[1]
 
     if not os.path.isfile(csv_filename):
-        print(f"Error: The file '{csv_filename}' does not exist.")
+        logging.error(f"Error: The file '{csv_filename}' does not exist.")
         sys.exit(1)
 
     analyze_and_generate_report(csv_filename)
