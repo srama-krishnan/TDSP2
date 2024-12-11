@@ -144,18 +144,18 @@ def analyze_and_generate_report(csv_file):
     # Write README.md
     readme_path = os.path.join(output_dir, "README.md")
     with open(readme_path, "w") as readme_file:
-        readme_file.write("# **Analysis Report**\n\n")
-        readme_file.write("## **Dataset Overview**\n")
+        readme_file.write("# *Analysis Report*\n\n")
+        readme_file.write("## *Dataset Overview*\n")
         readme_file.write(f"The dataset contains {len(df)} rows and {len(df.columns)} columns. Below is a summary of the data:\n\n")
         readme_file.write("### Columns:\n")
         for col in summary['columns']:
             readme_file.write(f"- {col}\n")
         readme_file.write("\n")
 
-        readme_file.write("## **Analysis Summary**\n")
+        readme_file.write("## *Analysis Summary*\n")
         readme_file.write(narration + "\n\n")
 
-        readme_file.write("## **Visualizations**\n")
+        readme_file.write("## *Visualizations*\n")
         for viz in visualizations:
             readme_file.write(f"### {viz.replace('.png', '').capitalize()}:\n")
             readme_file.write(f"![{viz}]({viz})\n\n")
