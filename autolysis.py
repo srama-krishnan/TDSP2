@@ -30,6 +30,10 @@ if not API_KEY:
 def query_llm(messages):
     """
     Query the LLM for analysis insights.
+    Args:
+        messages (list): A list of message dictionaries for the chat model.
+    Returns:
+        str: The response content from the model.
     """
     headers = {
         "Content-Type": "application/json",
@@ -46,6 +50,10 @@ def query_llm(messages):
 def detect_and_load_csv(file_path):
     """
     Detect file encoding and load the CSV.
+    Args:
+        file_path (str): Path to the CSV file.
+    Returns:
+        pd.DataFrame: Loaded dataset.
     """
     try:
         with open(file_path, 'rb') as f:
@@ -57,22 +65,17 @@ def detect_and_load_csv(file_path):
         logging.warning(f"Error loading with detected encoding. Using ISO-8859-1. Error: {e}")
         return pd.read_csv(file_path, encoding='ISO-8859-1')
 
-def clean_numeric_data(df):
-    """
-    Filter numeric columns and safely convert data to numeric where possible.
-    """
-    numeric_df = df.copy()
-    for col in df.columns:
-        # Convert valid numeric columns or replace non-convertible data with NaN
-        numeric_df[col] = pd.to_numeric(df[col], errors='coerce')
-    return numeric_df
-
 def generate_visualizations(df, output_dir):
     """
     Generate and save visualizations.
+    Args:
+        df (pd.DataFrame): The dataset.
+        output_dir (str): Directory to save visualizations.
+    Returns:
+        list: Paths of saved visualizations.
     """
     visualizations = []
-    numeric_df = clean_numeric_data(df).select_dtypes(include=["number"])
+    numeric_df = df.select_dtypes(include=["number"])
 
     # Correlation Heatmap
     if numeric_df.shape[1] > 1:
@@ -88,7 +91,7 @@ def generate_visualizations(df, output_dir):
         logging.info(f"Heatmap saved to: {path}")
 
     # Distribution Plot
-    for col in numeric_df.columns[:2]:  # Limit to first 2 numeric columns
+    for col in numeric_df.columns[:2]:  # Limit to first 2 columns
         plt.figure(figsize=(8, 6))
         sns.histplot(numeric_df[col], kde=True, bins=20)
         plt.title(f"Distribution of {col}")
@@ -106,10 +109,13 @@ def generate_visualizations(df, output_dir):
 def generate_report(df, summary, visualizations, output_dir):
     """
     Generate analysis report and insights.
+    Args:
+        df (pd.DataFrame): Dataset.
+        summary (dict): Summary statistics and insights.
+        visualizations (list): Paths to saved visualizations.
+        output_dir (str): Directory to save the report.
     """
-    numeric_df = clean_numeric_data(df).select_dtypes(include=["number"])
-
-    # Improve the prompt with numerical insights
+    # Improve the prompt with additional insights
     messages = [
         {"role": "system", "content": "You are a skilled data analyst. Provide detailed and structured insights."},
         {"role": "user", "content": f"""
@@ -118,8 +124,8 @@ def generate_report(df, summary, visualizations, output_dir):
         - Data Types: {summary['data_types']}
         - Missing Values: {summary['num_missing_values']}
         - Summary Statistics: {summary['summary_stats']}
-        - Correlations: {numeric_df.corr().to_dict()}
-        - Skewness: {numeric_df.skew().to_dict()}
+        - Correlations: {df.corr().to_dict()}
+        - Skewness: {df.skew(numeric_only=True).to_dict()}
         
         Provide:
         1. Key insights from the data.
@@ -129,6 +135,7 @@ def generate_report(df, summary, visualizations, output_dir):
         """}
     ]
 
+    # Query the LLM for insights
     try:
         insights = query_llm(messages)
     except Exception as e:
@@ -167,7 +174,7 @@ def analyze_and_generate_report(csv_file):
         "columns": list(df.columns),
         "data_types": df.dtypes.to_dict(),
         "num_missing_values": df.isnull().sum().to_dict(),
-        "summary_stats": df.describe(include="all", datetime_is_numeric=True).to_dict(),
+        "summary_stats": df.describe(include="all").to_dict(),
     }
 
     # Generate visualizations
