@@ -104,7 +104,6 @@ def analyze_and_generate_report(csv_file):
         plt.savefig(heatmap_path, dpi=150)
         visualizations.append(heatmap_path)
         plt.close()
-        logging.info(f"Heatmap saved to: {heatmap_path}")
 
     if not numeric_df.empty:
         plt.figure(figsize=(6, 6))
@@ -114,7 +113,6 @@ def analyze_and_generate_report(csv_file):
         plt.savefig(dist_path, dpi=150)
         visualizations.append(dist_path)
         plt.close()
-        logging.info(f"Distribution plot saved to: {dist_path}")
 
     categorical_df = df.select_dtypes(include=["object"])
     if not numeric_df.empty and not categorical_df.empty:
@@ -126,12 +124,18 @@ def analyze_and_generate_report(csv_file):
         plt.savefig(boxplot_path, dpi=150)
         visualizations.append(boxplot_path)
         plt.close()
-        logging.info(f"Boxplot saved to: {boxplot_path}")
 
     try:
+        # Improved LLM query with structured prompt
         messages = [
-            {"role": "system", "content": "You are a data analysis assistant."},
-            {"role": "user", "content": f"Summarize and analyze this dataset. Columns: {summary['columns']}\n"}
+            {"role": "system", "content": "You are a highly experienced data analyst."},
+            {"role": "user", "content": f"""
+            Analyze the dataset with the following details:
+            Columns: {summary['columns']}
+            Data Types: {summary['data_types']}
+            Missing Values: {summary['num_missing_values']}
+            Summary Statistics: {summary['summary_stats']}
+            """}
         ]
         narration = query_llm(messages)
     except Exception as e:
@@ -141,7 +145,7 @@ def analyze_and_generate_report(csv_file):
     with open(readme_path, "w") as readme_file:
         readme_file.write("# *Analysis Report*\n\n")
         readme_file.write("## *Dataset Overview*\n")
-        readme_file.write(f"The dataset contains {len(df)} rows and {len(df.columns)} columns. Below is a summary of the data:\n\n")
+        readme_file.write(f"The dataset contains {len(df)} rows and {len(df.columns)} columns.\n\n")
         readme_file.write("### Columns:\n")
         for col in summary['columns']:
             readme_file.write(f"- {col}\n")
